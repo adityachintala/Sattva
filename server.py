@@ -54,10 +54,15 @@ def index():
 async def stt(file: UploadFile = File(...), lang: str = Form("unknown")):
     """Speech -> text via Saaras."""
     audio = await file.read()
+    # Sarvam rejects MIME types carrying codec parameters (e.g. "audio/webm;codecs=opus").
+    ctype = (file.content_type or "audio/wav").split(";")[0].strip().lower()
+    if ctype in ("", "application/octet-stream"):
+        ctype = "audio/wav"
+    fname = file.filename or "audio.wav"
     r = requests.post(
         f"{BASE}/speech-to-text",
         headers=HEADERS,
-        files={"file": (file.filename or "audio.webm", audio, file.content_type or "audio/webm")},
+        files={"file": (fname, audio, ctype)},
         data={"model": "saaras:v3", "mode": "transcribe", "language_code": lang},
         timeout=60,
     )
